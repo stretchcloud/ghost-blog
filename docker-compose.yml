@@ -1,0 +1,29 @@
+version: '3.2'
+
+services:
+
+  ghost:
+    image: ghost:2-alpine
+    restart: always
+    ports:
+      - 3001:2368
+      
+    volumes:
+      - /var/www/ghost/content/data:/var/lib/ghost/content/data
+      - /var/www/ghost/content/apps:/var/lib/ghost/content/apps
+      - /var/www/ghost/content/images:/var/lib/ghost/content/images
+      - /var/www/ghost/content/themes:/var/lib/ghost/content/themes
+      
+volumes:
+   ghost_data:
+      driver: local
+   ghost_apps:
+      driver: local
+   ghost_images:
+      driver: local
+   ghost_themes:
+      driver: local
+      
+    # Specify your Ghost blog URL and mail server settings
+    environment:
+      url: {Your Blog URL}
