@@ -1,0 +1,59 @@
+upstream ghost_upstream {
+    server 192.168.1.35:3001;
+    keepalive 64;
+}
+
+proxy_cache_path /var/cache/nginx/ levels=1:2 keys_zone=blog_cache:75m max_size=512m inactive=60m;
+proxy_cache_key "$scheme$request_method$host$request_uri";
+proxy_cache_methods GET HEAD;
+
+server {
+        # Your server URL here
+        server_name blog.kube-mesh.io;
+        listen [::]:80; 
+        listen 80;
+    # disable any limits to avoid HTTP 413 for large image uploads
+    client_max_body_size 0;
+    
+    # required to avoid HTTP 411: see Issue #1486 (https://github.com/docker/docker/issues/1486)
+    chunked_transfer_encoding on;
+    
+    location / {
+            proxy_cache blog_cache; 
+            proxy_cache_valid any 10m;
+            add_header X-Proxy-Cache    $upstream_cache_status;
+            proxy_ignore_headers        Cache-Control; 
+            proxy_cache_use_stale       error timeout http_500 http_502 http_503 http_504;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-NginX-Proxy true;
+            proxy_pass http://192.168.1.35:3001/;
+            proxy_ssl_session_reuse off;
+            proxy_set_header Host $http_host;
+            proxy_cache_bypass $http_upgrade;
+            proxy_set_header X-Forwarded-Proto $scheme;
+            proxy_read_timeout 900;
+            proxy_redirect off;
+    }
+    
+    location ^~ /assets/ {
+        root /var/www/ghost/content/themes/royce;
+        access_log off;
+        expires max; 
+    }
+
+    location ^~ /content/images/ {
+    root /var/www/ghost/content/images;
+    access_log off; 
+    expires max;
+    }
+    
+    location ^~ /ghost/ {
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass http://192.168.1.35:3001;
+    }
+
+}
